@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Healthy Meal Delivery — Tier 2 India | Market Opportunity Dashboard</title>
+
+  <!-- Tailwind CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Plotly for charts -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!-- simple-statistics for quick regression -->
+  <script src="https://unpkg.com/simple-statistics@7.7.4/dist/simple-statistics.min.js"></script>
+
+  <!-- WordCloud2 for wordcloud -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.1.0/wordcloud2.min.js"></script>
+
+  <style>
+    /* Small custom styles */
+    body { background: linear-gradient(180deg,#07122a 0%, #071a2f 60%); color: #e6eef6; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    .glass { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 8px 30px rgba(2,6,23,0.6); }
+    .kpi { font-weight:700; font-size:1.05rem; color:#0b1220; }
+    .muted { color:#9aa6b2; }
+    .small { font-size:0.85rem; color:#b9c6cf; }
+    .code { font-family:Menlo,Monaco,Consolas,monospace; font-size:0.85rem; background:#041b2b; padding:10px; border-radius:6px; display:block; color:#c7f9ff; overflow:auto }
+    .topbar { backdrop-filter: blur(6px); }
+    #map-legend { font-size:0.85rem }
+    /* responsive height for charts */
+    .chart { min-height:320px; }
+  </style>
+</head>
+<body class="antialiased">
+  <div class="max-w-7xl mx-auto p-6">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-300 to-blue-400 flex items-center justify-center text-slate-900 font-bold">BI</div>
+        <div>
+          <h1 class="text-2xl font-semibold">Healthy Meal Delivery — Tier 2 India</h1>
+          <p class="muted small">Market Opportunity Analysis • Jaipur · Indore · Coimbatore · Lucknow · Nagpur</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <a class="text-sm px-3 py-2 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 text-white" href="#executive">Open Dashboard</a>
+        <a class="text-sm px-3 py-2 rounded-md glass" href="#technical">Technical Docs</a>
+      </div>
+    </header>
+
+    <!-- Hero / Executive Dashboard -->
+    <section id="executive" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div class="glass p-5 rounded-xl lg:col-span-2">
+        <h2 class="text-xl font-semibold mb-2">Executive summary</h2>
+        <p class="muted mb-4">
+          <strong>Business question:</strong> Is there a growing opportunity for healthy and affordable
+          meal delivery services in Tier 2 Indian cities, and what factors are driving demand?
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="p-4 rounded-md bg-white/5">
+            <div class="text-xs muted">Top opportunity city</div>
+            <div class="kpi" id="kpi-top-city">—</div>
+            <div class="small muted">Ranked by opportunity index</div>
+          </div>
+          <div class="p-4 rounded-md bg-white/5">
+            <div class="text-xs muted">Avg search growth</div>
+            <div class="kpi" id="kpi-search-growth">—</div>
+            <div class="small muted">3-year trend (sample)</div>
+          </div>
+          <div class="p-4 rounded-md bg-white/5">
+            <div class="text-xs muted">Affordable index (lower price = better)</div>
+            <div class="kpi" id="kpi-affordable">—</div>
+            <div class="small muted">Normalized</div>
+          </div>
+        </div>
+
+        <div class="mb-4 flex gap-2 items-center">
+          <label class="muted text-sm">Filter city:</label>
+          <select id="city-filter" class="p-2 rounded-md bg-white/5 text-white">
+            <option value="All">All cities</option>
+          </select>
+
+          <button id="reset-btn" class="ml-3 px-3 py-1 rounded-md glass small">Reset</button>
+        </div>
+
+        <div id="trend-chart" class="chart"></div>
+      </div>
+
+      <!-- Right column: opportunity index and top insights -->
+      <aside class="glass p-5 rounded-xl">
+        <h3 class="text-lg font-semibold mb-2">Opportunity Index (overview)</h3>
+        <p class="small muted mb-3">Combined score: demand (search) ↑, affordability (price) ↑, local income ↑.</p>
+        <div id="index-bar" class="chart"></div>
+
+        <h4 class="mt-4 font-semibold">Key insights</h4>
+        <ul class="list-disc list-inside muted small">
+          <li id="insight-1">Loading insights...</li>
+          <li id="insight-2">—</li>
+          <li id="insight-3">—</li>
+        </ul>
+      </aside>
+    </section>
+
+    <!-- Visualization grid -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div class="glass p-4 rounded-xl lg:col-span-2">
+        <h3 class="font-semibold mb-2">Price vs Rating (scatter) & Restaurant counts</h3>
+        <div id="scatter-chart" class="chart"></div>
+        <p class="muted small mt-2">Bubble size indicates number of healthy-meal-capable restaurants (sample).</p>
+      </div>
+
+      <div class="glass p-4 rounded-xl">
+        <h3 class="font-semibold mb-2">Correlation heatmap</h3>
+        <div id="heatmap" class="chart"></div>
+        <p class="muted small mt-2">Shows relationships between median income, avg price, rating, and search interest.</p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div class="glass p-4 rounded-xl">
+        <h3 class="font-semibold mb-2">City Opportunity Map</h3>
+        <div id="map-chart" class="chart"></div>
+        <div id="map-legend" class="muted small mt-2">Bubble size → Opportunity; color → relative demand</div>
+      </div>
+
+      <div class="glass p-4 rounded-xl">
+        <h3 class="font-semibold mb-2">Forecast: Next 6 months (search interest)</h3>
+        <div id="forecast-chart" class="chart"></div>
+        <p class="muted small mt-2">Simple linear projection (illustrative). Use model in notebook for production forecasts.</p>
+      </div>
+
+      <div class="glass p-4 rounded-xl">
+        <h3 class="font-semibold mb-2">Cuisine mix & sentiment</h3>
+        <div class="mb-4">
+          <div id="cuisine-bar" class="chart" style="min-height:220px"></div>
+        </div>
+        <div class="p-2 rounded-md bg-white/5">
+          <div id="wordcloud" style="width:100%;height:180px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technical documentation -->
+    <section id="technical" class="glass p-5 rounded-xl mb-6">
+      <h2 class="text-xl font-semibold mb-3">Technical documentation & data governance</h2>
+
+      <h3 class="font-semibold">Data sources used (sample)</h3>
+      <ul class="muted small list-disc list-inside mb-3">
+        <li>Google Trends (India) — search interest time series for keywords like "healthy meal delivery", "diet food".</li>
+        <li>Kaggle restaurant datasets (Zomato / Swiggy sample) — pricing, ratings, cuisine, location.</li>
+        <li>data.gov.in — demographic & income statistics per city / district.</li>
+        <li>Twitter / Reddit — customer sentiment (sampleed using snscrape or Twitter API).</li>
+      </ul>
+
+      <h4 class="font-semibold">Data governance & ethics</h4>
+      <ol class="muted small list-decimal list-inside mb-3">
+        <li>Only public/open data used; any personal data must be anonymized and GDPR-compliant.</li>
+        <li>Attribution: include links to each dataset in your GitHub README and in-site citations.</li>
+        <li>When scraping, respect robots.txt and rate limits; prefer official APIs.</li>
+        <li>Document quality checks (missing values, outlier handling) in your notebook.</li>
+      </ol>
+
+      <h4 class="font-semibold">How to replace sample data with your real CSVs</h4>
+      <p class="muted small mb-2">Drop your CSVs into the `data/` folder and edit the JS `loadDataFromCSV()` function below or replace the arrays. Example CSV column formats expected (city, avg_price, avg_rating, restaurant_count, median_income).</p>
+
+      <pre class="code">
+# Example Python (pytrends + pandas) to fetch Google Trends and export CSV
+from pytrends.request import TrendReq
+import pandas as pd
+pytrends = TrendReq(hl='en-US', tz=330)
+kw = ["healthy meal delivery", "diet food"]
+pytrends.build_payload(kw, cat=0, timeframe='2019-01-01 2025-01-01', geo='IN')
+df = pytrends.interest_over_time()
+df.to_csv('data/google_trends.csv')
+      </pre>
+
+      <h4 class="font-semibold">Reproducibility</h4>
+      <p class="muted small">Include `requirements.txt` with versions (pandas, pytrends, scikit-learn, textblob). Store raw data or provide persistent links (Kaggle URLs or Google Drive) in GitHub repo. Include a README with the steps to replicate the plots.</p>
+    </section>
+
+    <!-- Insights, recommendations and limitations -->
+    <section class="glass p-5 rounded-xl mb-6">
+      <h2 class="text-xl font-semibold mb-2">Insights, recommendations & limitations</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h4 class="font-semibold">Top findings</h4>
+          <ul class="muted small list-disc list-inside mb-3">
+            <li id="find-1">—</li>
+            <li id="find-2">—</li>
+            <li id="find-3">—</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold">Recommendations for entrepreneurs</h4>
+          <ol class="muted small list-decimal list-inside mb-3">
+            <li>Start in the top-ranked Tier 2 city with pilot menu focusing on local tastes + healthy options.</li>
+            <li>Use dynamic pricing & subscription meals to hit 'affordable' price points.</li>
+            <li>Partner with local gyms and corporate offices to drive volume.</li>
+          </ol>
+          <h4 class="font-semibold">Limitations & next steps</h4>
+          <p class="muted small">This proof-of-concept uses sample data. You should incorporate live API data, perform time-series cross-validation for forecasts, and run statistical tests (t-tests / chi-square) for robust conclusions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI reflection -->
+    <section class="glass p-5 rounded-xl mb-6">
+      <h2 class="text-xl font-semibold mb-2">AI tools reflection (required)</h2>
+      <p class="muted small">
+        <em>200–300 words template (edit to reflect your own workflow):</em>
+      </p>
+      <div class="p-3 bg-white/5 rounded-md small">
+        <p>
+          I used AI tools (ChatGPT) extensively during this project to speed up data wrangling, generate visualization code, and debug JavaScript/Plotly interactions.
+          I prompted ChatGPT for Python snippets to extract Google Trends data using `pytrends`, for reusable data-cleaning patterns (handling price strings and missing values),
+          and for charting templates that are interactive and deploy-friendly. The AI accelerated iteration: I could quickly experiment with different opportunity index formulas,
+          and generate explanations that I later adapted for the website copy. Key learning: prompts that include the desired data schema and an example output lead to more useful code.
+          Challenges included ensuring that AI-generated code handled edge cases (e.g., missing trend dates) — I often had to manually test and refine the code snippets.
+          I documented every AI-generated change in the notebook and README. Ultimately, AI served as a helpful pair-programmer, but all final analysis decisions (normalization, weighting, and business interpretation)
+          were made by me to ensure entrepreneurial relevance and reproducibility.
+        </p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-6 text-sm muted small">
+      <div class="flex justify-between items-center">
+        <div>Prepared by: <strong>Your Name</strong> • MSc Entrepreneurship • Student no: <strong>XXXXXXXX</strong></div>
+        <div>GitHub: <a class="text-indigo-300" href="#" id="github-link">username.github.io/project-name</a></div>
+      </div>
+      <div class="mt-2 muted">Tip: Capture a screenshot of the homepage (press ⌘+Shift+4 / Win+Shift+S) — you will include that in your one-page PDF submission.</div>
+    </footer>
+
+  </div>
+
+  <!-- ===== Sample data & charting code ===== -->
+  <script>
+  /************************************************************************
+   * SAMPLE DATA
+   * Replace these arrays by loading CSVs or via AJAX (see instructions above)
+   ************************************************************************/
+  const cities = ["Jaipur","Indore","Coimbatore","Lucknow","Nagpur"];
+  // Zomato-like aggregated sample (avg price for 2, rating out of 5, count of restaurants, median_income (INR per month))
+  const zomato = [
+    {city:"Jaipur", avg_price:180, avg_rating:4.05, restaurant_count:340, median_income:23000},
+    {city:"Indore", avg_price:150, avg_rating:3.95, restaurant_count:290, median_income:20000},
+    {city:"Coimbatore", avg_price:160, avg_rating:4.12, restaurant_count:210, median_income:22000},
+    {city:"Lucknow", avg_price:140, avg_rating:3.88, restaurant_count:180, median_income:19000},
+    {city:"Nagpur", avg_price:130, avg_rating:3.90, restaurant_count:160, median_income:18500}
+  ];
+
+  // Google Trends sample: monthly index (0-100) across 24 months (synthetic)
+  const trendDates = [
+    "2023-01","2023-02","2023-03","2023-04","2023-05","2023-06","2023-07","2023-08",
+    "2023-09","2023-10","2023-11","2023-12","2024-01","2024-02","2024-03","2024-04",
+    "2024-05","2024-06","2024-07","2024-08","2024-09","2024-10","2024-11","2024-12"
+  ];
+
+  // Synthetic trends per city (values chosen to show growth)
+  const trends = {
+    "Jaipur":      [20,22,25,27,30,33,36,40,45,50,52,55,58,60,63,66,68,71,74,77,80,82,85,88],
+    "Indore":      [15,16,18,19,21,22,24,27,30,32,33,34,36,38,40,43,45,47,50,53,56,58,60,62],
+    "Coimbatore":  [12,13,14,16,17,18,20,22,24,26,28,30,32,35,37,39,41,43,45,47,49,51,53,54],
+    "Lucknow":     [10,11,12,13,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,31,32],
+    "Nagpur":      [8,9,9,10,10,11,12,13,14,15,16,16,17,18,18,19,20,21,22,22,23,24,24,25]
+  };
+
+  // Sentiment word list sample from social media (word, weight)
+  const sentimentWords = [
+    ["healthy", 45],["affordable",30],["fresh",28],["tasty",20],["subscription",18],
+    ["expensive",14],["portion",12],["delivery",40],["packaging",10],["variety",16],
+    ["diet",22],["local",11]
+  ];
+
+  // Cuisine mix sample (aggregated counts across healthy-friendly restaurants)
+  const cuisineMix = [
+    {cuisine:"Indian-Healthy", count:120},
+    {cuisine:"Salads", count:70},
+    {cuisine:"Sattu/Regional-Health", count:45},
+    {cuisine:"Protein-focused", count:55},
+    {cuisine:"Smoothies", count:30}
+  ];
+
+  /************************************************************************
+   * Utility functions
+   ************************************************************************/
+  function normalize(arr) {
+    const min = Math.min(...arr), max = Math.max(...arr);
+    if (max === min) return arr.map(_ => 0.5);
+    return arr.map(v => (v - min) / (max - min));
+  }
+
+  function opportunityIndexForCity(cityObj, trendLatestNorm, priceNorm, incomeNorm, restCountNorm) {
+    // Weighted score: trend 45%, affordability (lower price -> higher) 25%, income 20%, restaurant count 10%
+    // affordability uses (1 - priceNorm) since lower price => better
+    return 0.45 * trendLatestNorm + 0.25 * (1 - priceNorm) + 0.20 * incomeNorm + 0.10 * restCountNorm;
+  }
+
+  /************************************************************************
+   * Build charts & interactions
+   ************************************************************************/
+  function buildDashboard() {
+    // populate city filter
+    const sel = document.getElementById("city-filter");
+    cities.forEach(c => {
+      const opt = document.createElement("option"); opt.value = c; opt.text = c;
+      sel.appendChild(opt);
+    });
+
+    // compute derived metrics
+    const trendLatest = cities.map(c => trends[c][trends[c].length - 1]);
+    const priceArr = zomato.map(z => z.avg_price);
+    const incomeArr = zomato.map(z => z.median_income);
+    const restCountArr = zomato.map(z => z.restaurant_count);
+
+    const trendNorm = normalize(trendLatest);
+    const priceNorm = normalize(priceArr);
+    const incomeNorm = normalize(incomeArr);
+    const restNorm = normalize(restCountArr);
+
+    // compute opportunity scores
+    const scores = zomato.map((z, i) => {
+      const score = opportunityIndexForCity(z, trendNorm[i], priceNorm[i], incomeNorm[i], restNorm[i]);
+      return {...z, trendLatest: trendLatest[i], score: + (score*100).toFixed(2) };
+    });
+
+    // sort by score
+    scores.sort((a,b) => b.score - a.score);
+
+    // KPIs
+    document.getElementById("kpi-top-city").innerText = scores[0].city + " (" + scores[0].score + ")";
+    const avgGrowth = (trendLatest.reduce((a,b) => a+b,0)/trendLatest.length).toFixed(1);
+    document.getElementById("kpi-search-growth").innerText = avgGrowth + " index (sample)";
+    document.getElementById("kpi-affordable").innerText = (100 - (priceNorm.reduce((a,b) => a+b,0)/priceNorm.length*100)).toFixed(0);
+
+    // populate insights placeholder
+    document.getElementById("insight-1").innerText = `Sample insight: ${scores[0].city} shows highest combined demand & affordability score.`;
+    document.getElementById("insight-2").innerText = `Trend growth: Jaipur & Indore exhibit strongest search interest growth over the sample period.`;
+    document.getElementById("insight-3").innerText = `Recommendation: Pilot small subscription menu in ${scores[0].city} with competitive price around ₹${Math.round(scores[0].avg_price * 0.95)}.`;
+
+    document.getElementById("find-1").innerText = `${scores[0].city} ranks top for demand and affordability (score ${scores[0].score}).`;
+    document.getElementById("find-2").innerText = `Positive sentiment around 'healthy' and 'affordable' indicates market receptivity (social sampling).`;
+    document.getElementById("find-3").innerText = `Limitations: Sample data; full analysis requires live API pulls and statistical tests.`;
+
+    // Build Trend line (Plotly)
+    const trendTraces = cities.map(c => {
+      return { x: trendDates, y: trends[c], mode: 'lines+markers', name: c, hovertemplate: '%{x}<br>%{y} index' };
+    });
+    const trendLayout = {
+      margin: {t:20,l:40,r:20,b:40}, legend:{orientation:'h'}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)'
+    };
+    Plotly.newPlot('trend-chart', trendTraces, trendLayout, {responsive:true});
+
+    // Opportunity index bar
+    const idxBars = [{ x: scores.map(s=>s.city), y: scores.map(s=>s.score), type:'bar', marker:{color:'rgba(125,211,252,0.9)'} }];
+    Plotly.newPlot('index-bar', idxBars, {margin:{t:10,b:40}, yaxis:{title:'Opportunity score (0-100)'}}, {responsive:true});
+
+    // Scatter price vs rating with bubble size
+    const scatter = [{
+      x: zomato.map(z=>z.avg_price),
+      y: zomato.map(z=>z.avg_rating),
+      text: zomato.map(z=>z.city),
+      mode: 'markers',
+      marker: { size: zomato.map(z=> Math.max(8, z.restaurant_count/10) ), sizemode:'area', sizeref:1 },
+      hovertemplate: '<b>%{text}</b><br>Price: ₹%{x}<br>Rating: %{y}<extra></extra>'
+    }];
+    Plotly.newPlot('scatter-chart', scatter, {xaxis:{title:'Avg price (₹ for two)'}, yaxis:{title:'Avg rating (out of 5)'}}, {responsive:true});
+
+    // Heatmap correlation among numeric vars
+    const numericVars = ["median_income","avg_price","avg_rating","trendLatest","restaurant_count"];
+    const dataMatrix = zomato.map((z,i) => [z.median_income, z.avg_price, z.avg_rating, trendLatest[i], z.restaurant_count]);
+    // compute correlation matrix
+    function corr(a, b) {
+      const meanA = ss.mean(a), meanB = ss.mean(b);
+      const num = a.map((v,i)=> (v-meanA)*(b[i]-meanB)).reduce((x,y)=>x+y,0);
+      const den = Math.sqrt(a.map(v=>Math.pow(v-meanA,2)).reduce((x,y)=>x+y,0) * b.map(v=>Math.pow(v-meanB,2)).reduce((x,y)=>x+y,0));
+      if (den === 0) return 0;
+      return num/den;
+    }
+    const cols = numericVars.map((_,i) => dataMatrix.map(r => r[i]));
+    const corrMatrix = cols.map((col,i) => cols.map((_,j) => +(corr(cols[i], cols[j]).toFixed(2))));
+
+    const heat = [{
+      z: corrMatrix,
+      x: numericVars,
+      y: numericVars,
+      type:'heatmap',
+      colorscale:'RdBu',
+      reversescale:true
+    }];
+    Plotly.newPlot('heatmap', heat, {margin:{t:20,b:40}}, {responsive:true});
+
+    // Map (scattergeo) - marker size by opportunity
+    const mapTrace = [{
+      type:'scattergeo',
+      locationmode: 'country names',
+      lon: [75.7878,75.8577,76.9558,80.9462,79.0882], // Jaipur, Indore, Coimbatore, Lucknow, Nagpur (approx lon)
+      lat: [26.9124,22.7196,11.0168,26.8467,21.1458], // approx lat
+      text: scores.map(s => `${s.city}<br>Score: ${s.score}`),
+      marker: {
+        size: scores.map(s => Math.max(8, s.score/2)),
+        color: scores.map(s => s.score),
+        colorscale: 'YlGnBu',
+        cmin: 0, cmax:100, line:{color:'#011827',width:0.5}
+      },
+      hoverinfo:'text'
+    }];
+    const mapLayout = {
+      geo: { scope:'asia', projection:{type:'natural earth'}, showland:true, landcolor:'#f8f8f8', bgcolor: 'rgba(0,0,0,0)'},
+      margin:{t:0,b:0}
+    };
+    Plotly.newPlot('map-chart', mapTrace, mapLayout, {responsive:true});
+
+    // Forecast (simple linear regression) for a selected city (default top winner)
+    function computeForecastFor(city) {
+      const y = trends[city].slice(); // numeric
+      const x = y.map((_,i) => i);
+      // compute linear regression parameters
+      const lr = ss.linearRegression(x.map((xi, i) => [xi, y[i]]));
+      const line = ss.linearRegressionLine(lr);
+      const futureX = [];
+      const futureY = [];
+      const monthsOut = 6;
+      for (let i=0;i<monthsOut;i++){
+        const xi = x.length + i;
+        futureX.push(xi);
+        futureY.push(line(xi));
+      }
+      const combinedXlabels = trendDates.concat(Array.from({length:monthsOut}, (_,i) => `+${i+1}m`));
+      const combinedY = y.concat(futureY);
+      return {xlabels: combinedXlabels, y: combinedY, actualX: trendDates};
+    }
+    const forecastData = computeForecastFor(scores[0].city);
+    Plotly.newPlot('forecast-chart', [
+      { x: forecastData.xlabels, y: forecastData.y, mode:'lines+markers', name:'Projected' },
+      { x: trends[scores[0].city].map((_,i)=>trendDates[i]), y: trends[scores[0].city], mode:'lines', name:'Actual' }
+    ], {margin:{t:10,b:40}}, {responsive:true});
+
+    // Cuisine bar
+    Plotly.newPlot('cuisine-bar', [{x:cuisineMix.map(x=>x.cuisine), y:cuisineMix.map(x=>x.count), type:'bar'}], {margin:{t:10,b:40}}, {responsive:true});
+
+    // Wordcloud
+    WordCloud(document.getElementById('wordcloud'), {
+      list: sentimentWords,
+      gridSize: Math.round(16 * (document.getElementById('wordcloud').offsetWidth / 200)),
+      weightFactor: function (size) { return size * 1.5; },
+      rotateRatio: 0.3,
+      backgroundColor: 'transparent',
+      color: '#9fe6ff',
+      fontFamily: 'Inter, sans-serif'
+    });
+
+    // Interactivity: city filter updates charts
+    sel.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'All') {
+        // restore full trend
+        Plotly.react('trend-chart', trendTraces, trendLayout);
+        Plotly.react('scatter-chart', scatter, {xaxis:{title:'Avg price (₹ for two)'}, yaxis:{title:'Avg rating (out of 5)'}});
+        Plotly.react('map-chart', mapTrace, mapLayout);
+        Plotly.react('index-bar', idxBars);
+      } else {
+        Plotly.react('trend-chart', [{x:trendDates, y:trends[val], mode:'lines+markers', name:val}], trendLayout);
+        // filter scatter to selected city
+        const z = zomato.find(z=>z.city===val);
+        const sscatter = [{ x:[z.avg_price], y:[z.avg_rating], text:[z.city], mode:'markers', marker:{size:[Math.max(8,z.restaurant_count/10)]}, hovertemplate: '<b>%{text}</b><br>Price: ₹%{x}<br>Rating: %{y}<extra></extra>' }];
+        Plotly.react('scatter-chart', sscatter, {xaxis:{title:'Avg price (₹)'}, yaxis:{title:'Avg rating (out of 5)'}});
+        // update map to highlight single city
+        const idx = scores.findIndex(s=>s.city===val);
+        const singleMap = [{
+          type:'scattergeo',
+          lon:[mapTrace[0].lon[idx]],
+          lat:[mapTrace[0].lat[idx]],
+          text:[mapTrace[0].text[idx]],
+          marker: { size:[mapTrace[0].marker.size[idx]*1.3], color:[mapTrace[0].marker.color[idx]], colorscale:'YlGnBu' }
+        }];
+        Plotly.react('map-chart', singleMap, mapLayout);
+        // index bar show single value
+        Plotly.react('index-bar', [{x:[z.city], y:[scores.find(s=>s.city===val).score], type:'bar'}]);
+      }
+    });
+
+    // Reset button
+    document.getElementById("reset-btn").addEventListener('click', () => {
+      document.getElementById("city-filter").value = "All";
+      document.getElementById("city-filter").dispatchEvent(new Event('change'));
+    });
+  }
+
+  // Initialize when DOM ready
+  document.addEventListener('DOMContentLoaded', buildDashboard);
+  </script>
+</body>
+</html>
